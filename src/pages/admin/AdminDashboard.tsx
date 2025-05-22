@@ -3,7 +3,7 @@ import React from 'react';
 import Layout from '@/components/layout/Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { mockDelegatedTasks, mockPriceRecords, mockProducts } from '@/data/mockData';
-import { BarChart, PieChart } from '@/components/ui/chart';
+import { BarChart, PieChart } from '@/components/ui/charts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TaskStatus, PriceOrigin } from '@/types';
 
