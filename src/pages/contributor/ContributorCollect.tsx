@@ -1,106 +1,196 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import Layout from '@/components/layout/Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from '@/components/ui/select';
-import { mockProducts, mockMarkets, mockPriceRecords } from '@/data/mockData';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Textarea } from '@/components/ui/textarea';
-import { Barcode, Edit, Search } from 'lucide-react';
+import { Barcode, Edit } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { supabase } from '@/integrations/supabase/client';
+import { PriceOrigin } from '@/types';
 
 const ContributorCollect = () => {
   const { currentUser } = useAuth();
   
   // Form states
-  const [selectedProductId, setSelectedProductId] = useState('');
-  const [selectedMarketId, setSelectedMarketId] = useState('');
+  const [marketName, setMarketName] = useState('');
   const [price, setPrice] = useState('');
   const [notes, setNotes] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
   const [manualProductName, setManualProductName] = useState('');
   const [manualProductEan, setManualProductEan] = useState('');
   const [manualProductBrand, setManualProductBrand] = useState('');
   const [eanInput, setEanInput] = useState('');
-  const [inputMethod, setInputMethod] = useState<'search' | 'barcode' | 'manual'>('search');
+  const [inputMethod, setInputMethod] = useState<'barcode' | 'manual'>('barcode');
+  const [foundProduct, setFoundProduct] = useState<any>(null);
+  const [userHistory, setUserHistory] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   
-  // Filter products based on search term
-  const filteredProducts = useMemo(() => {
-    if (!searchTerm) return mockProducts;
-    
-    return mockProducts.filter(product => 
-      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.barcode.includes(searchTerm)
-    );
-  }, [searchTerm]);
+  // Fetch user history on component mount
+  useEffect(() => {
+    if (currentUser?.id) {
+      fetchUserHistory();
+    }
+  }, [currentUser?.id]);
   
-  // Get user's price collection history
-  const userHistory = mockPriceRecords.filter(record => 
-    record.userId === currentUser?.id
-  ).sort((a, b) => new Date(b.collectedAt).getTime() - new Date(a.collectedAt).getTime());
-  
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (inputMethod === 'search' && !selectedProductId) {
-      toast.error('Por favor, selecione um produto');
-      return;
+  const fetchUserHistory = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('price_records')
+        .select(`
+          *,
+          product:product_id (name, brand, barcode)
+        `)
+        .eq('user_id', currentUser?.id)
+        .order('collected_at', { ascending: false })
+        .limit(5);
+        
+      if (error) throw error;
+      
+      setUserHistory(data || []);
+    } catch (error: any) {
+      console.error('Error fetching history:', error.message);
+      toast.error('Erro ao carregar histórico');
     }
-    
-    if (inputMethod === 'manual' && (!manualProductName || !manualProductEan)) {
-      toast.error('Por favor, preencha os dados do produto');
-      return;
-    }
-    
-    if (inputMethod === 'barcode' && !eanInput) {
-      toast.error('Por favor, escaneie ou digite o código de barras');
-      return;
-    }
-    
-    if (!selectedMarketId || !price) {
-      toast.error('Por favor, preencha todos os campos obrigatórios');
-      return;
-    }
-    
-    // In a real app, this would save to a database
-    toast.success('Preço registrado com sucesso!');
-    
-    // Reset form
-    setSelectedProductId('');
-    setSelectedMarketId('');
-    setPrice('');
-    setNotes('');
-    setEanInput('');
-    setManualProductName('');
-    setManualProductEan('');
-    setManualProductBrand('');
-    setSearchTerm('');
   };
   
-  const handleScanBarcode = () => {
-    // In a real app, this would open the camera for barcode scanning
-    // For this demo, we'll simulate finding a product by EAN
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
     
-    const foundProduct = mockProducts.find(p => p.barcode === eanInput);
+    try {
+      // Validate inputs
+      if (inputMethod === 'manual' && (!manualProductName || !manualProductEan)) {
+        toast.error('Por favor, preencha os dados do produto');
+        return;
+      }
+      
+      if (inputMethod === 'barcode' && !eanInput) {
+        toast.error('Por favor, escaneie ou digite o código de barras');
+        return;
+      }
+      
+      if (!marketName || !price) {
+        toast.error('Por favor, preencha todos os campos obrigatórios');
+        return;
+      }
+      
+      let productId;
+      
+      // Handle product based on input method
+      if (inputMethod === 'barcode') {
+        // If product was found by barcode, use it
+        if (foundProduct) {
+          productId = foundProduct.id;
+        } else {
+          toast.error('Produto não encontrado. Por favor use a entrada manual.');
+          return;
+        }
+      } else {
+        // For manual entry, first check if barcode already exists
+        const { data: existingProduct } = await supabase
+          .from('products')
+          .select('id')
+          .eq('barcode', manualProductEan)
+          .limit(1);
+          
+        if (existingProduct && existingProduct.length > 0) {
+          productId = existingProduct[0].id;
+        } else {
+          // Create new product
+          const { data: newProduct, error: productError } = await supabase
+            .from('products')
+            .insert({
+              name: manualProductName,
+              brand: manualProductBrand || null,
+              barcode: manualProductEan
+            })
+            .select()
+            .single();
+            
+          if (productError) throw productError;
+          productId = newProduct.id;
+        }
+      }
+      
+      // Create price record
+      const { error: priceError } = await supabase
+        .from('price_records')
+        .insert({
+          product_id: productId,
+          market_name: marketName,
+          price: parseFloat(price),
+          collected_at: new Date().toISOString(),
+          user_id: currentUser?.id,
+          notes: notes || null,
+          origin: PriceOrigin.CONTRIBUTOR
+        });
+        
+      if (priceError) throw priceError;
+      
+      // Success
+      toast.success('Preço registrado com sucesso!');
+      
+      // Reset form
+      setMarketName('');
+      setPrice('');
+      setNotes('');
+      setEanInput('');
+      setManualProductName('');
+      setManualProductEan('');
+      setManualProductBrand('');
+      setFoundProduct(null);
+      
+      // Refresh history
+      fetchUserHistory();
+      
+    } catch (error: any) {
+      console.error('Error saving data:', error.message);
+      toast.error('Erro ao salvar dados');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const handleScanBarcode = async () => {
+    if (!eanInput) {
+      toast.error('Por favor, digite um código de barras');
+      return;
+    }
     
-    if (foundProduct) {
-      setSelectedProductId(foundProduct.id);
-      toast.success(`Produto encontrado: ${foundProduct.name}`);
-    } else {
-      toast.error('Produto não encontrado. Por favor, verifique o código ou faça uma entrada manual.');
+    setIsLoading(true);
+    
+    try {
+      // Check if product exists in our database
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('barcode', eanInput)
+        .limit(1);
+        
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        setFoundProduct(data[0]);
+        toast.success(`Produto encontrado: ${data[0].name}`);
+      } else {
+        setFoundProduct(null);
+        toast.error('Produto não encontrado. Por favor, faça uma entrada manual.');
+        
+        // Pre-fill the manual entry form with the EAN
+        setManualProductEan(eanInput);
+        setInputMethod('manual');
+      }
+    } catch (error: any) {
+      console.error('Error checking product:', error.message);
+      toast.error('Erro ao verificar produto');
+    } finally {
+      setIsLoading(false);
     }
   };
   
@@ -118,11 +208,7 @@ const ContributorCollect = () => {
           </CardHeader>
           <CardContent>
             <Tabs value={inputMethod} onValueChange={(v) => setInputMethod(v as any)} className="w-full mb-6">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="search" className="flex items-center gap-2">
-                  <Search className="w-4 h-4" />
-                  Buscar
-                </TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="barcode" className="flex items-center gap-2">
                   <Barcode className="w-4 h-4" />
                   Código EAN
@@ -133,79 +219,8 @@ const ContributorCollect = () => {
                 </TabsTrigger>
               </TabsList>
               
-              <TabsContent value="search">
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="productSearch">Produto</Label>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
-                      <Input
-                        id="productSearch"
-                        placeholder="Busque o produto pelo nome ou marca..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 mb-2"
-                      />
-                    </div>
-                    
-                    <Select value={selectedProductId} onValueChange={setSelectedProductId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o produto" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {filteredProducts.map((product) => (
-                          <SelectItem key={product.id} value={product.id}>
-                            {product.name} - {product.brand}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                
-                  <div className="space-y-2">
-                    <Label htmlFor="market">Mercado</Label>
-                    <Select value={selectedMarketId} onValueChange={setSelectedMarketId}>
-                      <SelectTrigger id="market">
-                        <SelectValue placeholder="Selecione o mercado" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {mockMarkets.map((market) => (
-                          <SelectItem key={market.id} value={market.id}>
-                            {market.name} - {market.neighborhood}, {market.city}/{market.state}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="price">Preço (R$)</Label>
-                    <Input
-                      id="price"
-                      type="number"
-                      step="0.01"
-                      placeholder="0,00"
-                      value={price}
-                      onChange={(e) => setPrice(e.target.value)}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="notes">Observações (opcional)</Label>
-                    <Textarea
-                      id="notes"
-                      placeholder="Adicione informações relevantes sobre o preço..."
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                    />
-                  </div>
-                  
-                  <Button type="submit" className="w-full">Registrar Preço</Button>
-                </form>
-              </TabsContent>
-              
-              <TabsContent value="barcode">
-                <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-6 mt-6">
+                <TabsContent value="barcode">
                   <div className="space-y-2">
                     <Label htmlFor="eanInput">Código de barras (EAN)</Label>
                     <div className="flex gap-2">
@@ -216,68 +231,26 @@ const ContributorCollect = () => {
                         onChange={(e) => setEanInput(e.target.value)}
                         className="flex-1"
                       />
-                      <Button type="button" onClick={handleScanBarcode}>
+                      <Button 
+                        type="button" 
+                        onClick={handleScanBarcode}
+                        disabled={isLoading}
+                      >
                         <Barcode className="h-4 w-4 mr-2" />
                         Verificar
                       </Button>
                     </div>
                     
-                    {selectedProductId && (
+                    {foundProduct && (
                       <div className="mt-2 p-2 bg-muted rounded">
-                        <p className="font-medium">
-                          {mockProducts.find(p => p.id === selectedProductId)?.name}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {mockProducts.find(p => p.id === selectedProductId)?.brand}
-                        </p>
+                        <p className="font-medium">{foundProduct.name}</p>
+                        <p className="text-sm text-muted-foreground">{foundProduct.brand}</p>
                       </div>
                     )}
                   </div>
+                </TabsContent>
                 
-                  <div className="space-y-2">
-                    <Label htmlFor="market">Mercado</Label>
-                    <Select value={selectedMarketId} onValueChange={setSelectedMarketId}>
-                      <SelectTrigger id="market">
-                        <SelectValue placeholder="Selecione o mercado" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {mockMarkets.map((market) => (
-                          <SelectItem key={market.id} value={market.id}>
-                            {market.name} - {market.neighborhood}, {market.city}/{market.state}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="price">Preço (R$)</Label>
-                    <Input
-                      id="price"
-                      type="number"
-                      step="0.01"
-                      placeholder="0,00"
-                      value={price}
-                      onChange={(e) => setPrice(e.target.value)}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="notes">Observações (opcional)</Label>
-                    <Textarea
-                      id="notes"
-                      placeholder="Adicione informações relevantes sobre o preço..."
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                    />
-                  </div>
-                  
-                  <Button type="submit" className="w-full">Registrar Preço</Button>
-                </form>
-              </TabsContent>
-              
-              <TabsContent value="manual">
-                <form onSubmit={handleSubmit} className="space-y-6">
+                <TabsContent value="manual">
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="manualProductName">Nome do Produto</Label>
@@ -309,48 +282,48 @@ const ContributorCollect = () => {
                       />
                     </div>
                   </div>
+                </TabsContent>
                 
-                  <div className="space-y-2">
-                    <Label htmlFor="market">Mercado</Label>
-                    <Select value={selectedMarketId} onValueChange={setSelectedMarketId}>
-                      <SelectTrigger id="market">
-                        <SelectValue placeholder="Selecione o mercado" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {mockMarkets.map((market) => (
-                          <SelectItem key={market.id} value={market.id}>
-                            {market.name} - {market.neighborhood}, {market.city}/{market.state}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="price">Preço (R$)</Label>
-                    <Input
-                      id="price"
-                      type="number"
-                      step="0.01"
-                      placeholder="0,00"
-                      value={price}
-                      onChange={(e) => setPrice(e.target.value)}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="notes">Observações (opcional)</Label>
-                    <Textarea
-                      id="notes"
-                      placeholder="Adicione informações relevantes sobre o preço..."
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                    />
-                  </div>
-                  
-                  <Button type="submit" className="w-full">Registrar Preço</Button>
-                </form>
-              </TabsContent>
+                <div className="space-y-2">
+                  <Label htmlFor="market">Nome do Mercado</Label>
+                  <Input
+                    id="market"
+                    placeholder="Digite o nome do mercado"
+                    value={marketName}
+                    onChange={(e) => setMarketName(e.target.value)}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="price">Preço (R$)</Label>
+                  <Input
+                    id="price"
+                    type="number"
+                    step="0.01"
+                    placeholder="0,00"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="notes">Observações (opcional)</Label>
+                  <Textarea
+                    id="notes"
+                    placeholder="Adicione informações relevantes sobre o preço..."
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                  />
+                </div>
+                
+                <Button 
+                  type="submit" 
+                  className="w-full"
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Registrando...' : 'Registrar Preço'}
+                </Button>
+              </form>
             </Tabs>
           </CardContent>
         </Card>
@@ -371,19 +344,17 @@ const ContributorCollect = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                {userHistory.slice(0, 5).map((record) => {
-                  const product = mockProducts.find(p => p.id === record.productId);
-                  const market = mockMarkets.find(m => m.id === record.marketId);
-                  const collectedDate = new Date(record.collectedAt);
+                {userHistory.map((record) => {
+                  const collectedDate = new Date(record.collected_at);
                   
                   return (
                     <div key={record.id} className="border rounded-md p-4">
                       <div className="flex justify-between">
                         <div>
-                          <h3 className="font-semibold">{product?.name}</h3>
-                          <p className="text-sm text-muted-foreground">{product?.brand}</p>
+                          <h3 className="font-semibold">{record.product?.name}</h3>
+                          <p className="text-sm text-muted-foreground">{record.product?.brand}</p>
                           <p className="text-xs mt-1">
-                            {market?.name} - {market?.city}/{market?.state}
+                            {record.market_name}
                           </p>
                         </div>
                         <div className="text-right">

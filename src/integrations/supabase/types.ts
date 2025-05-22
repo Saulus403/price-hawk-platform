@@ -91,6 +91,98 @@ export type Database = {
         }
         Relationships: []
       }
+      markets: {
+        Row: {
+          city: string | null
+          created_at: string | null
+          id: string
+          name: string
+          neighborhood: string | null
+          state: string | null
+        }
+        Insert: {
+          city?: string | null
+          created_at?: string | null
+          id?: string
+          name: string
+          neighborhood?: string | null
+          state?: string | null
+        }
+        Update: {
+          city?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          neighborhood?: string | null
+          state?: string | null
+        }
+        Relationships: []
+      }
+      price_records: {
+        Row: {
+          collected_at: string | null
+          id: string
+          market_name: string
+          notes: string | null
+          origin: string
+          price: number
+          product_id: string
+          user_id: string
+        }
+        Insert: {
+          collected_at?: string | null
+          id?: string
+          market_name: string
+          notes?: string | null
+          origin: string
+          price: number
+          product_id: string
+          user_id: string
+        }
+        Update: {
+          collected_at?: string | null
+          id?: string
+          market_name?: string
+          notes?: string | null
+          origin?: string
+          price?: number
+          product_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_records_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          barcode: string
+          brand: string | null
+          created_at: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          barcode: string
+          brand?: string | null
+          created_at?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          barcode?: string
+          brand?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       produtos: {
         Row: {
           atualizado_em: string | null
