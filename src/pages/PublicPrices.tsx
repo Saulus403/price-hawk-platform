@@ -19,8 +19,8 @@ import { Search } from 'lucide-react';
 
 const PublicPrices = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCity, setSelectedCity] = useState<string>('');
-  const [selectedNeighborhood, setSelectedNeighborhood] = useState<string>('');
+  const [selectedCity, setSelectedCity] = useState<string>('all');
+  const [selectedNeighborhood, setSelectedNeighborhood] = useState<string>('all');
   
   // Get unique cities from markets
   const cities = useMemo(() => {
@@ -30,7 +30,7 @@ const PublicPrices = () => {
   
   // Get neighborhoods for selected city
   const neighborhoods = useMemo(() => {
-    if (!selectedCity) return [];
+    if (selectedCity === 'all') return [];
     const marketsInCity = mockMarkets.filter(market => market.city === selectedCity);
     const uniqueNeighborhoods = new Set(marketsInCity.map(market => market.neighborhood));
     return Array.from(uniqueNeighborhoods);
@@ -59,10 +59,10 @@ const PublicPrices = () => {
         product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         product.brand.toLowerCase().includes(searchTerm.toLowerCase());
       
-      const matchesCity = selectedCity === '' || market.city === selectedCity;
+      const matchesCity = selectedCity === 'all' || market.city === selectedCity;
       
       const matchesNeighborhood = 
-        selectedNeighborhood === '' || market.neighborhood === selectedNeighborhood;
+        selectedNeighborhood === 'all' || market.neighborhood === selectedNeighborhood;
       
       return matchesSearch && matchesCity && matchesNeighborhood;
     });
@@ -89,7 +89,7 @@ const PublicPrices = () => {
                 <SelectValue placeholder="Filtrar por cidade" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todas as cidades</SelectItem>
+                <SelectItem value="all">Todas as cidades</SelectItem>
                 {cities.map(city => (
                   <SelectItem key={city} value={city}>{city}</SelectItem>
                 ))}
@@ -98,13 +98,13 @@ const PublicPrices = () => {
             <Select 
               value={selectedNeighborhood} 
               onValueChange={setSelectedNeighborhood}
-              disabled={!selectedCity}
+              disabled={selectedCity === 'all'}
             >
               <SelectTrigger className="w-full md:w-[200px]">
                 <SelectValue placeholder="Filtrar por bairro" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos os bairros</SelectItem>
+                <SelectItem value="all">Todos os bairros</SelectItem>
                 {neighborhoods.map(neighborhood => (
                   <SelectItem key={neighborhood} value={neighborhood}>{neighborhood}</SelectItem>
                 ))}
