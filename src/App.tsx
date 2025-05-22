@@ -14,7 +14,12 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import PublicPrices from "./pages/PublicPrices";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminProducts from "./pages/admin/AdminProducts";
+import AdminMarkets from "./pages/admin/AdminMarkets";
+import AdminTasks from "./pages/admin/AdminTasks";
+import AdminUsers from "./pages/admin/AdminUsers";
 import AuditorTasks from "./pages/auditor/AuditorTasks";
+import AuditorCollect from "./pages/auditor/AuditorCollect";
 import ContributorCollect from "./pages/contributor/ContributorCollect";
 import NotFoundPage from "./components/NotFoundPage";
 
@@ -44,6 +49,38 @@ const App = () => {
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="/admin/products"
+                element={
+                  <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
+                    <AdminProducts />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/markets"
+                element={
+                  <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
+                    <AdminMarkets />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/tasks"
+                element={
+                  <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
+                    <AdminTasks />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/users"
+                element={
+                  <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
+                    <AdminUsers />
+                  </ProtectedRoute>
+                }
+              />
               
               {/* Auditor Routes */}
               <Route
@@ -51,6 +88,14 @@ const App = () => {
                 element={
                   <ProtectedRoute allowedRoles={[UserRole.AUDITOR]}>
                     <AuditorTasks />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/auditor/collect"
+                element={
+                  <ProtectedRoute allowedRoles={[UserRole.AUDITOR]}>
+                    <AuditorCollect />
                   </ProtectedRoute>
                 }
               />

@@ -19,7 +19,8 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { PriceOrigin } from '@/types';
 import { Textarea } from '@/components/ui/textarea';
-import { Search } from 'lucide-react';
+import { Barcode, Edit, Search } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const ContributorCollect = () => {
   const { currentUser } = useAuth();
@@ -30,6 +31,11 @@ const ContributorCollect = () => {
   const [price, setPrice] = useState('');
   const [notes, setNotes] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [manualProductName, setManualProductName] = useState('');
+  const [manualProductEan, setManualProductEan] = useState('');
+  const [manualProductBrand, setManualProductBrand] = useState('');
+  const [eanInput, setEanInput] = useState('');
+  const [inputMethod, setInputMethod] = useState<'search' | 'barcode' | 'manual'>('search');
   
   // Filter products based on search term
   const filteredProducts = useMemo(() => {
@@ -37,7 +43,8 @@ const ContributorCollect = () => {
     
     return mockProducts.filter(product => 
       product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.brand.toLowerCase().includes(searchTerm.toLowerCase())
+      product.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.barcode.includes(searchTerm)
     );
   }, [searchTerm]);
   
@@ -49,7 +56,22 @@ const ContributorCollect = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedProductId || !selectedMarketId || !price) {
+    if (inputMethod === 'search' && !selectedProductId) {
+      toast.error('Por favor, selecione um produto');
+      return;
+    }
+    
+    if (inputMethod === 'manual' && (!manualProductName || !manualProductEan)) {
+      toast.error('Por favor, preencha os dados do produto');
+      return;
+    }
+    
+    if (inputMethod === 'barcode' && !eanInput) {
+      toast.error('Por favor, escaneie ou digite o código de barras');
+      return;
+    }
+    
+    if (!selectedMarketId || !price) {
       toast.error('Por favor, preencha todos os campos obrigatórios');
       return;
     }
@@ -62,6 +84,25 @@ const ContributorCollect = () => {
     setSelectedMarketId('');
     setPrice('');
     setNotes('');
+    setEanInput('');
+    setManualProductName('');
+    setManualProductEan('');
+    setManualProductBrand('');
+    setSearchTerm('');
+  };
+  
+  const handleScanBarcode = () => {
+    // In a real app, this would open the camera for barcode scanning
+    // For this demo, we'll simulate finding a product by EAN
+    
+    const foundProduct = mockProducts.find(p => p.barcode === eanInput);
+    
+    if (foundProduct) {
+      setSelectedProductId(foundProduct.id);
+      toast.success(`Produto encontrado: ${foundProduct.name}`);
+    } else {
+      toast.error('Produto não encontrado. Por favor, verifique o código ou faça uma entrada manual.');
+    }
   };
   
   return (
@@ -77,74 +118,157 @@ const ContributorCollect = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="productSearch">Produto</Label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+            <Tabs value={inputMethod} onValueChange={(v) => setInputMethod(v as any)} className="w-full mb-6">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="search" className="flex items-center gap-2">
+                  <Search className="w-4 h-4" />
+                  Buscar
+                </TabsTrigger>
+                <TabsTrigger value="barcode" className="flex items-center gap-2">
+                  <Barcode className="w-4 h-4" />
+                  Código EAN
+                </TabsTrigger>
+                <TabsTrigger value="manual" className="flex items-center gap-2">
+                  <Edit className="w-4 h-4" />
+                  Manual
+                </TabsTrigger>
+              </TabsList>
+              
+              <form onSubmit={handleSubmit} className="space-y-6 mt-6">
+                <TabsContent value="search">
+                  <div className="space-y-2">
+                    <Label htmlFor="productSearch">Produto</Label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+                      <Input
+                        id="productSearch"
+                        placeholder="Busque o produto pelo nome ou marca..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10 mb-2"
+                      />
+                    </div>
+                    
+                    <Select value={selectedProductId} onValueChange={setSelectedProductId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o produto" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {filteredProducts.map((product) => (
+                          <SelectItem key={product.id} value={product.id}>
+                            {product.name} - {product.brand}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="barcode">
+                  <div className="space-y-2">
+                    <Label htmlFor="eanInput">Código de barras (EAN)</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="eanInput"
+                        placeholder="Escaneie ou digite o código de barras"
+                        value={eanInput}
+                        onChange={(e) => setEanInput(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button type="button" onClick={handleScanBarcode}>
+                        <Barcode className="h-4 w-4 mr-2" />
+                        Verificar
+                      </Button>
+                    </div>
+                    
+                    {selectedProductId && (
+                      <div className="mt-2 p-2 bg-muted rounded">
+                        <p className="font-medium">
+                          {mockProducts.find(p => p.id === selectedProductId)?.name}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {mockProducts.find(p => p.id === selectedProductId)?.brand}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="manual">
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="manualProductName">Nome do Produto</Label>
+                      <Input
+                        id="manualProductName"
+                        placeholder="Nome do produto"
+                        value={manualProductName}
+                        onChange={(e) => setManualProductName(e.target.value)}
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="manualProductBrand">Marca</Label>
+                      <Input
+                        id="manualProductBrand"
+                        placeholder="Marca do produto"
+                        value={manualProductBrand}
+                        onChange={(e) => setManualProductBrand(e.target.value)}
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="manualProductEan">Código EAN</Label>
+                      <Input
+                        id="manualProductEan"
+                        placeholder="Código de barras (EAN)"
+                        value={manualProductEan}
+                        onChange={(e) => setManualProductEan(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </TabsContent>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="market">Mercado</Label>
+                  <Select value={selectedMarketId} onValueChange={setSelectedMarketId}>
+                    <SelectTrigger id="market">
+                      <SelectValue placeholder="Selecione o mercado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {mockMarkets.map((market) => (
+                        <SelectItem key={market.id} value={market.id}>
+                          {market.name} - {market.neighborhood}, {market.city}/{market.state}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="price">Preço (R$)</Label>
                   <Input
-                    id="productSearch"
-                    placeholder="Busque o produto pelo nome ou marca..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 mb-2"
+                    id="price"
+                    type="number"
+                    step="0.01"
+                    placeholder="0,00"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
                   />
                 </div>
                 
-                <Select value={selectedProductId} onValueChange={setSelectedProductId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o produto" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filteredProducts.map((product) => (
-                      <SelectItem key={product.id} value={product.id}>
-                        {product.name} - {product.brand}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="market">Mercado</Label>
-                <Select value={selectedMarketId} onValueChange={setSelectedMarketId}>
-                  <SelectTrigger id="market">
-                    <SelectValue placeholder="Selecione o mercado" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {mockMarkets.map((market) => (
-                      <SelectItem key={market.id} value={market.id}>
-                        {market.name} - {market.neighborhood}, {market.city}/{market.state}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="price">Preço (R$)</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  step="0.01"
-                  placeholder="0,00"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="notes">Observações (opcional)</Label>
-                <Textarea
-                  id="notes"
-                  placeholder="Adicione informações relevantes sobre o preço..."
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                />
-              </div>
-              
-              <Button type="submit" className="w-full">Registrar Preço</Button>
-            </form>
+                <div className="space-y-2">
+                  <Label htmlFor="notes">Observações (opcional)</Label>
+                  <Textarea
+                    id="notes"
+                    placeholder="Adicione informações relevantes sobre o preço..."
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                  />
+                </div>
+                
+                <Button type="submit" className="w-full">Registrar Preço</Button>
+              </form>
+            </TabsContent>
           </CardContent>
         </Card>
         
