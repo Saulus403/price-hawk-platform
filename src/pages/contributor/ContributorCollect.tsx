@@ -17,7 +17,6 @@ import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { PriceOrigin } from '@/types';
 import { Textarea } from '@/components/ui/textarea';
 import { Barcode, Edit, Search } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -134,8 +133,8 @@ const ContributorCollect = () => {
                 </TabsTrigger>
               </TabsList>
               
-              <form onSubmit={handleSubmit} className="space-y-6 mt-6">
-                <TabsContent value="search">
+              <TabsContent value="search">
+                <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="space-y-2">
                     <Label htmlFor="productSearch">Produto</Label>
                     <div className="relative">
@@ -162,9 +161,51 @@ const ContributorCollect = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                </TabsContent>
                 
-                <TabsContent value="barcode">
+                  <div className="space-y-2">
+                    <Label htmlFor="market">Mercado</Label>
+                    <Select value={selectedMarketId} onValueChange={setSelectedMarketId}>
+                      <SelectTrigger id="market">
+                        <SelectValue placeholder="Selecione o mercado" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {mockMarkets.map((market) => (
+                          <SelectItem key={market.id} value={market.id}>
+                            {market.name} - {market.neighborhood}, {market.city}/{market.state}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="price">Preço (R$)</Label>
+                    <Input
+                      id="price"
+                      type="number"
+                      step="0.01"
+                      placeholder="0,00"
+                      value={price}
+                      onChange={(e) => setPrice(e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="notes">Observações (opcional)</Label>
+                    <Textarea
+                      id="notes"
+                      placeholder="Adicione informações relevantes sobre o preço..."
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                    />
+                  </div>
+                  
+                  <Button type="submit" className="w-full">Registrar Preço</Button>
+                </form>
+              </TabsContent>
+              
+              <TabsContent value="barcode">
+                <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="space-y-2">
                     <Label htmlFor="eanInput">Código de barras (EAN)</Label>
                     <div className="flex gap-2">
@@ -192,9 +233,51 @@ const ContributorCollect = () => {
                       </div>
                     )}
                   </div>
-                </TabsContent>
                 
-                <TabsContent value="manual">
+                  <div className="space-y-2">
+                    <Label htmlFor="market">Mercado</Label>
+                    <Select value={selectedMarketId} onValueChange={setSelectedMarketId}>
+                      <SelectTrigger id="market">
+                        <SelectValue placeholder="Selecione o mercado" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {mockMarkets.map((market) => (
+                          <SelectItem key={market.id} value={market.id}>
+                            {market.name} - {market.neighborhood}, {market.city}/{market.state}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="price">Preço (R$)</Label>
+                    <Input
+                      id="price"
+                      type="number"
+                      step="0.01"
+                      placeholder="0,00"
+                      value={price}
+                      onChange={(e) => setPrice(e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="notes">Observações (opcional)</Label>
+                    <Textarea
+                      id="notes"
+                      placeholder="Adicione informações relevantes sobre o preço..."
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                    />
+                  </div>
+                  
+                  <Button type="submit" className="w-full">Registrar Preço</Button>
+                </form>
+              </TabsContent>
+              
+              <TabsContent value="manual">
+                <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="manualProductName">Nome do Produto</Label>
@@ -226,49 +309,49 @@ const ContributorCollect = () => {
                       />
                     </div>
                   </div>
-                </TabsContent>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="market">Mercado</Label>
-                  <Select value={selectedMarketId} onValueChange={setSelectedMarketId}>
-                    <SelectTrigger id="market">
-                      <SelectValue placeholder="Selecione o mercado" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {mockMarkets.map((market) => (
-                        <SelectItem key={market.id} value={market.id}>
-                          {market.name} - {market.neighborhood}, {market.city}/{market.state}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="price">Preço (R$)</Label>
-                  <Input
-                    id="price"
-                    type="number"
-                    step="0.01"
-                    placeholder="0,00"
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="notes">Observações (opcional)</Label>
-                  <Textarea
-                    id="notes"
-                    placeholder="Adicione informações relevantes sobre o preço..."
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                  />
-                </div>
-                
-                <Button type="submit" className="w-full">Registrar Preço</Button>
-              </form>
-            </TabsContent>
+                  <div className="space-y-2">
+                    <Label htmlFor="market">Mercado</Label>
+                    <Select value={selectedMarketId} onValueChange={setSelectedMarketId}>
+                      <SelectTrigger id="market">
+                        <SelectValue placeholder="Selecione o mercado" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {mockMarkets.map((market) => (
+                          <SelectItem key={market.id} value={market.id}>
+                            {market.name} - {market.neighborhood}, {market.city}/{market.state}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="price">Preço (R$)</Label>
+                    <Input
+                      id="price"
+                      type="number"
+                      step="0.01"
+                      placeholder="0,00"
+                      value={price}
+                      onChange={(e) => setPrice(e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="notes">Observações (opcional)</Label>
+                    <Textarea
+                      id="notes"
+                      placeholder="Adicione informações relevantes sobre o preço..."
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                    />
+                  </div>
+                  
+                  <Button type="submit" className="w-full">Registrar Preço</Button>
+                </form>
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
         
