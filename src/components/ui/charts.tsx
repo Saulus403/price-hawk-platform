@@ -11,6 +11,7 @@ import {
   ArcElement,
   ChartData,
   ChartOptions,
+  ScriptableContext,
 } from 'chart.js';
 import { Bar, Pie } from 'react-chartjs-2';
 import { ChartContainer } from "./chart";
@@ -27,7 +28,7 @@ ChartJS.register(
 );
 
 // Default styling options for both charts
-const defaultOptions: ChartOptions<'bar' | 'pie'> = {
+const defaultOptions = {
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
@@ -81,14 +82,14 @@ export function BarChart({
   };
 
   // Configure options for the bar chart
-  const options: ChartOptions<'bar'> = {
+  const barOptions = {
     ...defaultOptions,
     scales: {
       y: {
         beginAtZero: true,
         ticks: {
-          callback: function(value) {
-            return valueFormatter(value as number);
+          callback: function(value: number) {
+            return valueFormatter(value);
           }
         }
       },
@@ -98,7 +99,7 @@ export function BarChart({
       tooltip: {
         ...defaultOptions.plugins?.tooltip,
         callbacks: {
-          label: function(context) {
+          label: function(context: any) {
             return valueFormatter(context.parsed.y);
           }
         }
@@ -108,7 +109,7 @@ export function BarChart({
 
   return (
     <ChartContainer className={className} config={{}}>
-      <Bar data={chartData} options={options} />
+      <Bar data={chartData} options={barOptions as any} />
     </ChartContainer>
   );
 }
@@ -147,14 +148,14 @@ export function PieChart({
   };
 
   // Configure options for the pie chart
-  const options: ChartOptions<'pie'> = {
+  const pieOptions = {
     ...defaultOptions,
     plugins: {
       ...defaultOptions.plugins,
       tooltip: {
         ...defaultOptions.plugins?.tooltip,
         callbacks: {
-          label: function(context) {
+          label: function(context: any) {
             const label = context.label || '';
             const value = context.parsed || 0;
             return `${label}: ${valueFormatter(value)}`;
@@ -166,7 +167,7 @@ export function PieChart({
 
   return (
     <ChartContainer className={className} config={{}}>
-      <Pie data={chartData} options={options} />
+      <Pie data={chartData} options={pieOptions as any} />
     </ChartContainer>
   );
 }

@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import { UserRole } from "./types";
+import { useState } from "react";
 
 // Pages
 import Home from "./pages/Home";
@@ -17,58 +18,61 @@ import AuditorTasks from "./pages/auditor/AuditorTasks";
 import ContributorCollect from "./pages/contributor/ContributorCollect";
 import NotFoundPage from "./components/NotFoundPage";
 
-const queryClient = new QueryClient();
+const App = () => {
+  // Create a new query client instance inside the component
+  const [queryClient] = useState(() => new QueryClient());
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<Home />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/prices" element={<PublicPrices />} />
-            
-            {/* Admin Routes */}
-            <Route
-              path="/admin/dashboard"
-              element={
-                <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
-                  <AdminDashboard />
-                </ProtectedRoute>
-              }
-            />
-            
-            {/* Auditor Routes */}
-            <Route
-              path="/auditor/tasks"
-              element={
-                <ProtectedRoute allowedRoles={[UserRole.AUDITOR]}>
-                  <AuditorTasks />
-                </ProtectedRoute>
-              }
-            />
-            
-            {/* Contributor Routes */}
-            <Route
-              path="/contributor/collect"
-              element={
-                <ProtectedRoute allowedRoles={[UserRole.CONTRIBUTOR]}>
-                  <ContributorCollect />
-                </ProtectedRoute>
-              }
-            />
-            
-            {/* 404 Not Found */}
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
-  </QueryClientProvider>
-);
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/" element={<Home />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/prices" element={<PublicPrices />} />
+              
+              {/* Admin Routes */}
+              <Route
+                path="/admin/dashboard"
+                element={
+                  <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              
+              {/* Auditor Routes */}
+              <Route
+                path="/auditor/tasks"
+                element={
+                  <ProtectedRoute allowedRoles={[UserRole.AUDITOR]}>
+                    <AuditorTasks />
+                  </ProtectedRoute>
+                }
+              />
+              
+              {/* Contributor Routes */}
+              <Route
+                path="/contributor/collect"
+                element={
+                  <ProtectedRoute allowedRoles={[UserRole.CONTRIBUTOR]}>
+                    <ContributorCollect />
+                  </ProtectedRoute>
+                }
+              />
+              
+              {/* 404 Not Found */}
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
