@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -33,28 +32,32 @@ const Login = () => {
   const [registerName, setRegisterName] = useState('');
   const [registerRole, setRegisterRole] = useState<UserRole>(UserRole.CONTRIBUTOR);
 
-  const { login, register, isAuthenticated, currentUser } = useAuth();
+  const { login, register, isAuthenticated, currentUser, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (isAuthenticated && currentUser) {
-      console.log('User already authenticated, redirecting...', currentUser.role);
-      switch (currentUser.role) {
-        case UserRole.ADMIN:
-          navigate('/admin/dashboard', { replace: true });
-          break;
-        case UserRole.AUDITOR:
-          navigate('/auditor/tasks', { replace: true });
-          break;
-        case UserRole.CONTRIBUTOR:
-          navigate('/contributor/collect', { replace: true });
-          break;
-        default:
-          navigate('/', { replace: true });
-      }
+    if (isAuthenticated && currentUser && !authLoading) {
+      console.log('User authenticated, redirecting...', currentUser.role);
+      
+      // Use setTimeout to ensure navigation happens after render
+      setTimeout(() => {
+        switch (currentUser.role) {
+          case UserRole.ADMIN:
+            navigate('/admin/dashboard', { replace: true });
+            break;
+          case UserRole.AUDITOR:
+            navigate('/auditor/tasks', { replace: true });
+            break;
+          case UserRole.CONTRIBUTOR:
+            navigate('/contributor/collect', { replace: true });
+            break;
+          default:
+            navigate('/', { replace: true });
+        }
+      }, 100);
     }
-  }, [isAuthenticated, currentUser, navigate]);
+  }, [isAuthenticated, currentUser, authLoading, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,14 +72,13 @@ const Login = () => {
     try {
       const success = await login(loginEmail, loginPassword);
       
-      if (success) {
-        // Navigation will be handled by the useEffect above
-        console.log('Login successful, waiting for redirect...');
+      if (!success) {
+        setIsLoading(false);
       }
+      // Don't set loading to false on success - let the redirect handle it
     } catch (error) {
       console.error('Login error:', error);
       toast.error('Erro ao realizar login');
-    } finally {
       setIsLoading(false);
     }
   };
@@ -118,6 +120,20 @@ const Login = () => {
       setIsLoading(false);
     }
   };
+
+  // Show loading while auth is loading
+  if (authLoading) {
+    return (
+      <Layout>
+        <div className="flex justify-center items-center min-h-[calc(100vh-14rem)]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-2">Carregando...</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>

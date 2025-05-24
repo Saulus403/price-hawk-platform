@@ -27,93 +27,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   useEffect(() => {
     console.log('Setting up auth state listener...');
     
-    // Set up auth state listener first
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state change:', event, session?.user?.id);
         
         if (session && session.user) {
-          // Small delay to prevent deadlock
-          setTimeout(async () => {
-            try {
-              // Get user profile from usuarios table
-              const { data: profile, error } = await supabase
-                .from('usuarios')
-                .select('*')
-                .eq('id', session.user.id)
-                .single();
-                
-              if (profile && !error) {
-                const userData: User = {
-                  id: profile.id,
-                  email: profile.email,
-                  name: profile.nome,
-                  role: profile.role as UserRole,
-                  companyId: profile.empresa_id || ""
-                };
-                
-                console.log('User profile loaded:', userData);
-                setCurrentUser(userData);
-                setIsAuthenticated(true);
-              } else {
-                console.error('Error fetching user profile:', error);
-                // Try to create profile if it doesn't exist
-                if (error?.code === 'PGRST116') {
-                  console.log('Profile not found, creating...');
-                  const { data: newProfile, error: createError } = await supabase
-                    .from('usuarios')
-                    .insert({
-                      id: session.user.id,
-                      nome: session.user.email?.split('@')[0] || 'Usuário',
-                      email: session.user.email || '',
-                      role: 'alimentador',
-                      empresa_id: '550e8400-e29b-41d4-a716-446655440000'
-                    })
-                    .select()
-                    .single();
-                    
-                  if (newProfile && !createError) {
-                    const userData: User = {
-                      id: newProfile.id,
-                      email: newProfile.email,
-                      name: newProfile.nome,
-                      role: newProfile.role as UserRole,
-                      companyId: newProfile.empresa_id || ""
-                    };
-                    
-                    setCurrentUser(userData);
-                    setIsAuthenticated(true);
-                  } else {
-                    console.error('Error creating profile:', createError);
-                    setCurrentUser(null);
-                    setIsAuthenticated(false);
-                  }
-                } else {
-                  setCurrentUser(null);
-                  setIsAuthenticated(false);
-                }
-              }
-            } catch (error) {
-              console.error('Error in auth state change:', error);
-              setCurrentUser(null);
-              setIsAuthenticated(false);
-            }
-          }, 100);
-        } else {
-          setCurrentUser(null);
-          setIsAuthenticated(false);
-        }
-        
-        setIsLoading(false);
-      }
-    );
-
-    // Then check for existing session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      console.log('Initial session check:', session?.user?.id);
-      
-      if (session && session.user) {
-        setTimeout(async () => {
           try {
             // Get user profile from usuarios table
             const { data: profile, error } = await supabase
@@ -131,16 +50,65 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
                 companyId: profile.empresa_id || ""
               };
               
+              console.log('User profile loaded:', userData);
               setCurrentUser(userData);
               setIsAuthenticated(true);
+            } else {
+              console.error('Error fetching user profile:', error);
+              // Try to create profile if it doesn't exist
+              if (error?.code === 'PGRST116') {
+                console.log('Profile not found, creating...');
+                const { data: newProfile, error: createError } = await supabase
+                  .from('usuarios')
+                  .insert({
+                    id: session.user.id,
+                    nome: session.user.email?.split('@')[0] || 'Usuário',
+                    email: session.user.email || '',
+                    role: 'alimentador',
+                    empresa_id: '550e8400-e29b-41d4-a716-446655440000'
+                  })
+                  .select()
+                  .single();
+                  
+                if (newProfile && !createError) {
+                  const userData: User = {
+                    id: newProfile.id,
+                    email: newProfile.email,
+                    name: newProfile.nome,
+                    role: newProfile.role as UserRole,
+                    companyId: newProfile.empresa_id || ""
+                  };
+                  
+                  setCurrentUser(userData);
+                  setIsAuthenticated(true);
+                } else {
+                  console.error('Error creating profile:', createError);
+                  setCurrentUser(null);
+                  setIsAuthenticated(false);
+                }
+              } else {
+                setCurrentUser(null);
+                setIsAuthenticated(false);
+              }
             }
           } catch (error) {
-            console.error('Error loading initial session:', error);
+            console.error('Error in auth state change:', error);
+            setCurrentUser(null);
+            setIsAuthenticated(false);
           }
-          
-          setIsLoading(false);
-        }, 100);
-      } else {
+        } else {
+          setCurrentUser(null);
+          setIsAuthenticated(false);
+        }
+        
+        setIsLoading(false);
+      }
+    );
+
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session check:', session?.user?.id);
+      if (!session) {
         setIsLoading(false);
       }
     });
