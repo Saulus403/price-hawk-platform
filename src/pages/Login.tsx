@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,8 +33,28 @@ const Login = () => {
   const [registerName, setRegisterName] = useState('');
   const [registerRole, setRegisterRole] = useState<UserRole>(UserRole.CONTRIBUTOR);
 
-  const { login, register } = useAuth();
+  const { login, register, isAuthenticated, currentUser } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated && currentUser) {
+      console.log('User already authenticated, redirecting...', currentUser.role);
+      switch (currentUser.role) {
+        case UserRole.ADMIN:
+          navigate('/admin/dashboard', { replace: true });
+          break;
+        case UserRole.AUDITOR:
+          navigate('/auditor/tasks', { replace: true });
+          break;
+        case UserRole.CONTRIBUTOR:
+          navigate('/contributor/collect', { replace: true });
+          break;
+        default:
+          navigate('/', { replace: true });
+      }
+    }
+  }, [isAuthenticated, currentUser, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,11 +70,11 @@ const Login = () => {
       const success = await login(loginEmail, loginPassword);
       
       if (success) {
-        toast.success('Login realizado com sucesso');
-        navigate('/');
+        // Navigation will be handled by the useEffect above
+        console.log('Login successful, waiting for redirect...');
       }
     } catch (error) {
-      console.error(error);
+      console.error('Login error:', error);
       toast.error('Erro ao realizar login');
     } finally {
       setIsLoading(false);
@@ -92,7 +112,7 @@ const Login = () => {
         setRegisterName('');
       }
     } catch (error) {
-      console.error(error);
+      console.error('Register error:', error);
       toast.error('Erro ao realizar cadastro');
     } finally {
       setIsLoading(false);
@@ -127,6 +147,7 @@ const Login = () => {
                       value={loginEmail}
                       onChange={(e) => setLoginEmail(e.target.value)}
                       required
+                      disabled={isLoading}
                     />
                   </div>
                   <div className="space-y-2">
@@ -138,6 +159,7 @@ const Login = () => {
                       value={loginPassword}
                       onChange={(e) => setLoginPassword(e.target.value)}
                       required
+                      disabled={isLoading}
                     />
                   </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>
@@ -157,6 +179,7 @@ const Login = () => {
                       value={registerName}
                       onChange={(e) => setRegisterName(e.target.value)}
                       required
+                      disabled={isLoading}
                     />
                   </div>
                   <div className="space-y-2">
@@ -168,11 +191,12 @@ const Login = () => {
                       value={registerEmail}
                       onChange={(e) => setRegisterEmail(e.target.value)}
                       required
+                      disabled={isLoading}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="register-role">Perfil</Label>
-                    <Select value={registerRole} onValueChange={(value) => setRegisterRole(value as UserRole)}>
+                    <Select value={registerRole} onValueChange={(value) => setRegisterRole(value as UserRole)} disabled={isLoading}>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione um perfil" />
                       </SelectTrigger>
@@ -192,6 +216,7 @@ const Login = () => {
                       value={registerPassword}
                       onChange={(e) => setRegisterPassword(e.target.value)}
                       required
+                      disabled={isLoading}
                     />
                   </div>
                   <div className="space-y-2">
@@ -203,6 +228,7 @@ const Login = () => {
                       value={registerConfirmPassword}
                       onChange={(e) => setRegisterConfirmPassword(e.target.value)}
                       required
+                      disabled={isLoading}
                     />
                   </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>
