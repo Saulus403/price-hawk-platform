@@ -42,13 +42,13 @@ const AuditorCollect = () => {
   const fetchUserHistory = async () => {
     try {
       const { data, error } = await supabase
-        .from('price_records')
+        .from('precos_coletados')
         .select(`
           *,
-          product:product_id (name, brand, barcode)
+          product:produto_id (name, brand, barcode)
         `)
-        .eq('user_id', currentUser?.id)
-        .order('collected_at', { ascending: false })
+        .eq('alimentador_id', currentUser?.id)
+        .order('created_at', { ascending: false })
         .limit(5);
         
       if (error) throw error;
@@ -119,17 +119,17 @@ const AuditorCollect = () => {
         }
       }
       
-      // Create price record
+      // Create price record using the new table structure
       const { error: priceError } = await supabase
-        .from('price_records')
+        .from('precos_coletados')
         .insert({
-          product_id: productId,
-          market_name: marketName,
-          price: parseFloat(price),
-          collected_at: new Date().toISOString(),
-          user_id: currentUser?.id,
-          notes: notes || null,
-          origin: PriceOrigin.AUDITOR
+          produto_id: productId,
+          mercado_nome: marketName,
+          valor: parseFloat(price),
+          alimentador_id: currentUser?.id,
+          empresa_id: currentUser?.companyId,
+          notas: notes || null,
+          origem: PriceOrigin.AUDITOR
         });
         
       if (priceError) throw priceError;
@@ -346,7 +346,7 @@ const AuditorCollect = () => {
             ) : (
               <div className="space-y-4">
                 {userHistory.map((record) => {
-                  const collectedDate = new Date(record.collected_at);
+                  const collectedDate = new Date(record.created_at);
                   
                   return (
                     <div key={record.id} className="border rounded-md p-4">
@@ -355,12 +355,12 @@ const AuditorCollect = () => {
                           <h3 className="font-semibold">{record.product?.name}</h3>
                           <p className="text-sm text-muted-foreground">{record.product?.brand}</p>
                           <p className="text-xs mt-1">
-                            {record.market_name}
+                            {record.mercado_nome}
                           </p>
                         </div>
                         <div className="text-right">
                           <p className="text-lg font-bold">
-                            R$ {record.price.toFixed(2).replace('.', ',')}
+                            R$ {record.valor.toFixed(2).replace('.', ',')}
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {format(collectedDate, "d 'de' MMMM, yyyy", { locale: ptBR })}
