@@ -27,22 +27,33 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   useEffect(() => {
     // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         console.log('Auth state change:', event);
         
         if (session && session.user) {
-          // Get user profile info
-          const { id, email } = session.user;
-          const userData: User = {
-            id,
-            email: email || "",
-            name: session.user.user_metadata.name || email?.split('@')[0] || "User",
-            role: (session.user.user_metadata.role as UserRole) || UserRole.CONTRIBUTOR,
-            companyId: session.user.user_metadata.companyId || ""
-          };
-          
-          setCurrentUser(userData);
-          setIsAuthenticated(true);
+          // Get user profile from usuarios table
+          const { data: profile, error } = await supabase
+            .from('usuarios')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+            
+          if (profile && !error) {
+            const userData: User = {
+              id: profile.id,
+              email: profile.email,
+              name: profile.nome,
+              role: profile.role as UserRole,
+              companyId: profile.empresa_id || ""
+            };
+            
+            setCurrentUser(userData);
+            setIsAuthenticated(true);
+          } else {
+            console.error('Error fetching user profile:', error);
+            setCurrentUser(null);
+            setIsAuthenticated(false);
+          }
         } else {
           setCurrentUser(null);
           setIsAuthenticated(false);
@@ -51,20 +62,27 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     );
 
     // Then check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session && session.user) {
-        // Get user profile info
-        const { id, email } = session.user;
-        const userData: User = {
-          id,
-          email: email || "",
-          name: session.user.user_metadata.name || email?.split('@')[0] || "User",
-          role: (session.user.user_metadata.role as UserRole) || UserRole.CONTRIBUTOR,
-          companyId: session.user.user_metadata.companyId || ""
-        };
-        
-        setCurrentUser(userData);
-        setIsAuthenticated(true);
+        // Get user profile from usuarios table
+        const { data: profile, error } = await supabase
+          .from('usuarios')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+          
+        if (profile && !error) {
+          const userData: User = {
+            id: profile.id,
+            email: profile.email,
+            name: profile.nome,
+            role: profile.role as UserRole,
+            companyId: profile.empresa_id || ""
+          };
+          
+          setCurrentUser(userData);
+          setIsAuthenticated(true);
+        }
       }
       
       setIsLoading(false);

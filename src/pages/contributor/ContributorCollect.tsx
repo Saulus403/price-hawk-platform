@@ -13,7 +13,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Barcode, Edit } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
-import { PriceOrigin } from '@/types';
 
 const ContributorCollect = () => {
   const { currentUser } = useAuth();
@@ -41,13 +40,13 @@ const ContributorCollect = () => {
   const fetchUserHistory = async () => {
     try {
       const { data, error } = await supabase
-        .from('price_records')
+        .from('precos_coletados')
         .select(`
           *,
-          product:product_id (name, brand, barcode)
+          product:produto_id (name, brand, barcode)
         `)
-        .eq('user_id', currentUser?.id)
-        .order('collected_at', { ascending: false })
+        .eq('alimentador_id', currentUser?.id)
+        .order('created_at', { ascending: false })
         .limit(5);
         
       if (error) throw error;
@@ -61,6 +60,12 @@ const ContributorCollect = () => {
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!currentUser) {
+      toast.error('Usuário não autenticado');
+      return;
+    }
+    
     setIsLoading(true);
     
     try {
@@ -118,17 +123,18 @@ const ContributorCollect = () => {
         }
       }
       
-      // Create price record
+      // Create price record in precos_coletados table
       const { error: priceError } = await supabase
-        .from('price_records')
+        .from('precos_coletados')
         .insert({
-          product_id: productId,
-          market_name: marketName,
-          price: parseFloat(price),
-          collected_at: new Date().toISOString(),
-          user_id: currentUser?.id,
-          notes: notes || null,
-          origin: PriceOrigin.CONTRIBUTOR
+          produto_id: productId,
+          mercado_nome: marketName,
+          valor: parseFloat(price),
+          data_atualizacao: new Date().toISOString(),
+          alimentador_id: currentUser.id,
+          empresa_id: currentUser.companyId,
+          notas: notes || null,
+          origem: 'alimentador'
         });
         
       if (priceError) throw priceError;
@@ -345,7 +351,7 @@ const ContributorCollect = () => {
             ) : (
               <div className="space-y-4">
                 {userHistory.map((record) => {
-                  const collectedDate = new Date(record.collected_at);
+                  const collectedDate = new Date(record.created_at);
                   
                   return (
                     <div key={record.id} className="border rounded-md p-4">
@@ -354,12 +360,12 @@ const ContributorCollect = () => {
                           <h3 className="font-semibold">{record.product?.name}</h3>
                           <p className="text-sm text-muted-foreground">{record.product?.brand}</p>
                           <p className="text-xs mt-1">
-                            {record.market_name}
+                            {record.mercado_nome}
                           </p>
                         </div>
                         <div className="text-right">
                           <p className="text-lg font-bold">
-                            R$ {record.price.toFixed(2).replace('.', ',')}
+                            R$ {record.valor.toFixed(2).replace('.', ',')}
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {format(collectedDate, "d 'de' MMMM, yyyy", { locale: ptBR })}

@@ -61,6 +61,27 @@ export type Database = {
           },
         ]
       }
+      empresas: {
+        Row: {
+          cnpj: string | null
+          created_at: string | null
+          id: string
+          nome: string
+        }
+        Insert: {
+          cnpj?: string | null
+          created_at?: string | null
+          id?: string
+          nome: string
+        }
+        Update: {
+          cnpj?: string | null
+          created_at?: string | null
+          id?: string
+          nome?: string
+        }
+        Relationships: []
+      }
       estados: {
         Row: {
           nome: string
@@ -91,68 +112,109 @@ export type Database = {
         }
         Relationships: []
       }
-      markets: {
+      mercados: {
         Row: {
-          city: string | null
+          bairro: string | null
+          cidade: string | null
           created_at: string | null
+          empresa_id: string | null
+          estado: string | null
           id: string
-          name: string
-          neighborhood: string | null
-          state: string | null
+          nome: string
         }
         Insert: {
-          city?: string | null
+          bairro?: string | null
+          cidade?: string | null
           created_at?: string | null
+          empresa_id?: string | null
+          estado?: string | null
           id?: string
-          name: string
-          neighborhood?: string | null
-          state?: string | null
+          nome: string
         }
         Update: {
-          city?: string | null
+          bairro?: string | null
+          cidade?: string | null
           created_at?: string | null
+          empresa_id?: string | null
+          estado?: string | null
           id?: string
-          name?: string
-          neighborhood?: string | null
-          state?: string | null
-        }
-        Relationships: []
-      }
-      price_records: {
-        Row: {
-          collected_at: string | null
-          id: string
-          market_name: string
-          notes: string | null
-          origin: string
-          price: number
-          product_id: string
-          user_id: string
-        }
-        Insert: {
-          collected_at?: string | null
-          id?: string
-          market_name: string
-          notes?: string | null
-          origin: string
-          price: number
-          product_id: string
-          user_id: string
-        }
-        Update: {
-          collected_at?: string | null
-          id?: string
-          market_name?: string
-          notes?: string | null
-          origin?: string
-          price?: number
-          product_id?: string
-          user_id?: string
+          nome?: string
         }
         Relationships: [
           {
-            foreignKeyName: "price_records_product_id_fkey"
-            columns: ["product_id"]
+            foreignKeyName: "mercados_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      precos_coletados: {
+        Row: {
+          alimentador_id: string
+          created_at: string | null
+          data_atualizacao: string | null
+          empresa_id: string
+          id: string
+          mercado_id: string | null
+          mercado_nome: string | null
+          notas: string | null
+          origem: string
+          produto_id: string
+          valor: number
+        }
+        Insert: {
+          alimentador_id: string
+          created_at?: string | null
+          data_atualizacao?: string | null
+          empresa_id: string
+          id?: string
+          mercado_id?: string | null
+          mercado_nome?: string | null
+          notas?: string | null
+          origem?: string
+          produto_id: string
+          valor: number
+        }
+        Update: {
+          alimentador_id?: string
+          created_at?: string | null
+          data_atualizacao?: string | null
+          empresa_id?: string
+          id?: string
+          mercado_id?: string | null
+          mercado_nome?: string | null
+          notas?: string | null
+          origem?: string
+          produto_id?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "precos_coletados_alimentador_id_fkey"
+            columns: ["alimentador_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "precos_coletados_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "precos_coletados_mercado_id_fkey"
+            columns: ["mercado_id"]
+            isOneToOne: false
+            referencedRelation: "mercados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "precos_coletados_produto_id_fkey"
+            columns: ["produto_id"]
             isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
@@ -295,6 +357,44 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "estados"
             referencedColumns: ["sigla"]
+          },
+        ]
+      }
+      usuarios: {
+        Row: {
+          created_at: string | null
+          email: string
+          empresa_id: string | null
+          id: string
+          nome: string
+          role: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          empresa_id?: string | null
+          id: string
+          nome: string
+          role: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          empresa_id?: string | null
+          id?: string
+          nome?: string
+          role?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usuarios_empresa_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
           },
         ]
       }
